@@ -1,13 +1,14 @@
 from time import sleep
 from random import randint
 
-import telebot
+from telebot import TeleBot, types
 
 from const import HELLO_MESSAGE, BOT_TOKEN
 from model import Player
+from temp import get_mock_players
 from utils import set_roles
 
-mafia_bot = telebot.TeleBot(BOT_TOKEN)
+mafia_bot = TeleBot(BOT_TOKEN)
 
 players_room = {}  # используется для хранения номера комнаты
 rooms = {}  # комнаты
@@ -15,32 +16,32 @@ rooms = {}  # комнаты
 
 @mafia_bot.message_handler(content_types=['text', 'document'])
 def start(message):
-    match message.text:
-        case '/help':
-            mafia_bot.send_message(message.from_user.id, HELLO_MESSAGE)
+    if not message.from_user.id in players_room:
 
-        case 'Ведущий' | 'ведущий':
-            mafia_bot.send_message(message.from_user.id, 'Приветствую тебя, Ведущий!')
+        match message.text:
+            case '/help':
+                mafia_bot.send_message(message.from_user.id, HELLO_MESSAGE)
 
-            mafia_bot.send_message(
-                message.from_user.id,
-                'Игроков должно быть не меньше трех: \n'
-                '- Мафия\n'
-                '- Доктор\n'
-                '- Мирные граждане\n'
-                'Сколько будет игроков?'
-            )
-            mafia_bot.register_next_step_handler(message, handle_players)
+            case 'Ведущий' | 'ведущий':
+                mafia_bot.send_message(message.from_user.id, 'Приветствую тебя, Ведущий!')
 
-        case 'Игрок' | 'игрок':
-            if message.from_user.id in players_room:
-                mafia_bot.send_message(message.from_user.id, f'Вы уже состоите в комнате {players_room[message.from_user.id]}')
-            else:
+                mafia_bot.send_message(
+                    message.from_user.id,
+                    'Игроков должно быть не меньше трех: \n'
+                    '- Мафия\n'
+                    '- Шериф\n'
+                    '- Мирные граждане\n'
+                    'Сколько будет игроков?'
+                )
+                mafia_bot.register_next_step_handler(message, handle_players)
+
+            case 'Игрок' | 'игрок':
                 mafia_bot.send_message(message.from_user.id, 'Введите номер комнаты, чтобы присоединиться')
-                mafia_bot.register_next_step_handler(message, check_code)
-
-        case _:
-            mafia_bot.send_message(message.from_user.id, 'чтобы понять, как пользоваться ботом напиши `/help`')
+                mafia_bot.register_next_step_handler(message, handle_code)
+            case _:
+                mafia_bot.send_message(message.from_user.id, 'чтобы понять, как пользоваться ботом напиши `/help`')
+    else:
+        mafia_bot.send_message(message.from_user.id, f'Вы еще играете в комнате {players_room[message.from_user.id]}')
 
 
 def handle_players(message):
@@ -55,7 +56,8 @@ def handle_players(message):
         rooms[code_room] = {
             'master_id': message.from_user.id,  # необходимо чтобы потом слать ведущему сообщения
             'count_for_play': count,
-            'players': [],
+            'players': get_mock_players(),  # debugging
+            # 'players': [],
             'ready_for_play': False
         }
         mafia_bot.send_message(message.from_user.id, f'Комната с номером `{code_room}` создана,'
@@ -75,7 +77,7 @@ def handle_players(message):
             mafia_bot.send_message(player.id, f'Вы {player.role}')
 
 
-def check_code(message):
+def handle_code(message):
     code_room = int(message.text)
     if code_room not in rooms.keys():
         mafia_bot.send_message(message.from_user.id, f'Комнаты {code_room} не существует! попробуйте еще раз')
@@ -93,7 +95,7 @@ def handle_name(message):
     player.name = name
     code_room = players_room[message.from_user.id]
     mafia_bot.send_message(message.from_user.id, f'Ждём других игроков...')
-    if len(rooms[code_room]['players']) == rooms[code_room]['count_for_play']:
+    if len(rooms[code_room]['players']) >= rooms[code_room]['count_for_play']:
         rooms[code_room]['ready_for_play'] = True
 
 
@@ -105,4 +107,6 @@ def get_player_through_message(message):
             return all_players[i]
 
 
-mafia_bot.polling(none_stop=True, interval=0)
+if __name__ == '__main__':
+    mafia_bot.polling(none_stop=True, interval=0)
+
