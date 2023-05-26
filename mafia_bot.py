@@ -3,10 +3,11 @@ from random import randint
 
 from telebot import TeleBot, types
 
-from const import HELLO_MESSAGE, BOT_TOKEN
+from settings import HELLO_MESSAGE, BOT_TOKEN, DEBUG, ROLES
 from model import Player
 from player_factory import get_mock_players
-from utils import set_roles, get_players_status, check_end_game_condition_and_return_bool_and_message
+from utils import set_roles, get_players_status, check_end_game_condition_and_return_bool_and_message, \
+    get_player_for_queue, configure_roles
 
 mafia_bot = TeleBot(BOT_TOKEN)
 
@@ -61,19 +62,23 @@ def help(message):
 
 def handle_players(message):
     user_id = message.from_user.id
-    count = int(message.text)
-    if count < 3:
+    try:
+        number_of_players = int(message.text)
+    except ValueError as e:
+        mafia_bot.send_message(user_id, 'Ошибка!!! Введите число!!')
+        mafia_bot.register_next_step_handler(message, handle_players)
+    if number_of_players < 3:
         mafia_bot.send_message(user_id, 'игроков должно быть больше 3')
         mafia_bot.register_next_step_handler(message, handle_players)
     else:
         room_code = randint(100000, 999999)
         while room_code in rooms.keys():  # генерируем номер для случайной комнаты
             room_code = randint(100000, 999999)
+        configure_roles(number_of_players)
         rooms[room_code] = {
             'master_id': user_id,  # необходимо чтобы потом слать ведущему сообщения
-            'count_for_play': count,
-            'players': get_mock_players(),  # debugging
-            # 'players': [],
+            'count_for_play': number_of_players,
+            'players': get_mock_players() if DEBUG else [],  # debugging
             'ready_for_play': False,
             'game_is_started': False,
             'game_is_finished': False,
@@ -98,7 +103,7 @@ def handle_players(message):
 
         # игра
         rooms[room_code]['game_is_started'] = True
-        snapshot_of_players_status = get_players_status(rooms[room_code]['players'])
+        # snapshot_of_players_status = get_players_status(rooms[room_code]['players'])
         # очищаем комнату
         while not rooms[room_code]['game_is_finished']:
             sleep(1)
@@ -133,14 +138,18 @@ def handle_name(message):
         sleep(1)
     mafia_bot.send_message(user_id, 'Начинаем игру!!!')
 
-    handle_game(message, user_id, room_code)
+    queue_order = 0
+    handle_game(message, user_id, room_code, queue_order)
 
 
-def handle_game(message, user_id, room_code):
+def handle_game(message, user_id, room_code, queue_order):
     mafia_bot.send_message(user_id, 'Наступает ночь, город засыпает...')
     # игра ночью
+    role = ROLES[queue_order]
     pass  # TODO игроки ходят по очереди, сделать им кнопки
-
+    if not role == 'civilian':
+        player = get_player_for_queue(rooms[room_code]['players'], role)
+        # TODO выполнить ход
     mafia_bot.send_message(user_id, 'Наступает день, город просыпается...')
     # проверяем результаты
     is_end, message_for_user = check_end_game_condition_and_return_bool_and_message(rooms[room_code]['players'])
@@ -148,8 +157,8 @@ def handle_game(message, user_id, room_code):
         mafia_bot.send_message(user_id, message_for_user)
         handle_game(message, user_id, room_code)
     # если конец игры
-    rooms[room_code]['game_is_finished']
     mafia_bot.send_message(user_id, 'Спасибо за игру!!!')
+    rooms[room_code]['game_is_finished'] = True
 
 
 def get_player_through_message(message):

@@ -1,15 +1,18 @@
 from random import randint
-from const import ROLES
+from settings import ROLES
 from model import Player
+
+
+def configure_roles(number_of_players):
+    if number_of_players > 3:
+        ROLES.append('doctor')
 
 
 def set_roles(players):
     used_index = []
-    if len(players) > 3:
-        ROLES.append('doctor')
-
-    while len(ROLES) != 0:
-        role = ROLES.pop(0)
+    roles = ROLES[:]
+    while len(roles) != 0:
+        role = roles.pop(0)
         rand_index = randint(0, len(players) - 1)
         while rand_index in used_index:
             rand_index = randint(0, len(players) - 1)
@@ -26,6 +29,12 @@ def get_players_status(players):
     for player in players:
         statuses[player.name] = 'alive' if player.is_alive else 'dead'
     return statuses
+
+
+def get_player_for_queue(players, role):
+    # TODO в дальнейшем возвращать всех пользователей данной роли, например если мафии будет больше чем 1
+    player = list(filter(lambda player: player.role == role, players))[0]
+    return player
 
 
 def check_end_game_condition_and_return_bool_and_message(players: [Player]):
