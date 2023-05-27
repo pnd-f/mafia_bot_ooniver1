@@ -1,18 +1,17 @@
 from random import randint
-from settings import ROLES
 from model import Player
 
 
-def configure_roles(number_of_players):
+def configure_roles(number_of_players, roles):
     if number_of_players > 3:
-        ROLES.append('doctor')
+        roles.append('doctor')
 
 
-def set_roles(players):
+def set_roles(players, roles):
     used_index = []
-    roles = ROLES[:]
-    while len(roles) != 0:
-        role = roles.pop(0)
+    _roles = roles[:]
+    while len(_roles) != 0:
+        role = _roles.pop(0)
         rand_index = randint(0, len(players) - 1)
         while rand_index in used_index:
             rand_index = randint(0, len(players) - 1)

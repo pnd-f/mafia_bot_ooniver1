@@ -1,8 +1,8 @@
 class Player:
-    def __init__(self, user_id, code_room):
+    def __init__(self, user_id, room_code):
         self.id = user_id
         self.name = ''
-        self.code_room = code_room
+        self.room_code = room_code
         self.role = None
         self.is_alive = True
 
