@@ -1,10 +1,13 @@
 from random import randint
+
+from telebot import types
+
 from model import Player
 
 
 def configure_roles(number_of_players, roles):
     if number_of_players > 3:
-        roles.append('doctor')
+        roles.append('Доктор')
 
 
 def set_roles(players, roles):
@@ -20,7 +23,7 @@ def set_roles(players, roles):
     for i in range(len(players)):
         if i in used_index:
             continue
-        players[i].role = 'civilian'
+        players[i].role = 'Мирные граждане'
 
 
 def get_players_status(players):
@@ -30,10 +33,6 @@ def get_players_status(players):
     return statuses
 
 
-def get_player_for_queue(players, role):
-    # TODO в дальнейшем возвращать всех пользователей данной роли, например если мафии будет больше чем 1
-    player = list(filter(lambda player: player.role == role, players))[0]
-    return player
 
 
 def check_end_game_condition_and_return_bool_and_message(players: [Player]):
@@ -63,3 +62,19 @@ def check_end_game_condition_and_return_bool_and_message(players: [Player]):
         message = 'все мирные жители убиты...'
 
     return end_game, message
+
+
+def return_keyboard_with_alive_players(players, exclude_player):
+    keyboard = types.InlineKeyboardMarkup()
+    buttons = []
+    for player in players:
+        if player.name != exclude_player.name and player.is_alive:
+            buttons.append(types.InlineKeyboardButton(text=player.name, callback_data=player.id))
+    keyboard.add(*buttons)
+    return keyboard
+
+
+def get_player_through_id(players, user_id):
+    for player in players:
+        if player.id == user_id:
+            return player

@@ -7,4 +7,4 @@ class Player:
         self.is_alive = True
 
     def __repr__(self):
-        return self.name if self.name else 'anonim'
+        return f'{self.name if self.name else "anonim"} - {self.role if self.role else ""}'
