@@ -169,7 +169,7 @@ def handle_night(call):
     for player in alive_players:
         mafia_bot.send_message(player.id, f'Ходит {role}')  # можно картиночку послать ночи
 
-    players_with_role = list(filter(lambda player: player.role == role, room['players']))
+    players_with_role = list(filter(lambda player: player.role == role and player.is_alive, room['players']))
     action_message = {
         'Мафия': 'выберете кого убить...',
         'Доктор': 'выберете кого спасти...',
@@ -188,7 +188,7 @@ def check_list_names(call):
 
 
 @mafia_bot.callback_query_handler(check_list_names)
-def player_action(call):
+def night_action(call):
     player = get_player_through_players_room(call.from_user.id)
     room = rooms[player.room_code]
 
@@ -233,6 +233,10 @@ def handle_day(call):
         for player in room['players']:
             mafia_bot.send_message(player.id, 'Спасибо за игру!!!')
         mafia_bot.send_message(room['master_id'], 'Спасибо за игру!!!')  # отдельно шлем мастеру
+        # очищаем пользователей
+        for player in room['players']:
+            del players_room[player.id]
+        del players_room[room['master_id']]  # очищаем мастера
         del rooms[room_code]  # удаляем комнату
 
 
