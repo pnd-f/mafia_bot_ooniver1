@@ -3,9 +3,8 @@ from random import randint
 
 from telebot import TeleBot, types
 
-from settings import HELLO_MESSAGE, BOT_TOKEN, ROLES, ERROR_NUMBER_MESSAGE, DEBUG_ROOM_CODE, FILE_NAMES
+from settings import HELLO_MESSAGE, BOT_TOKEN, ROLES, ERROR_NUMBER_MESSAGE, FILE_NAMES
 from model import Player
-from player_factory import get_mock_players
 from utils import set_roles, check_end_game_condition_and_return_bool_and_message, \
     configure_roles, return_keyboard_with_alive_players, get_player_through_id
 
