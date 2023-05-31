@@ -37,8 +37,8 @@ def check_end_game_condition_and_return_bool_and_message(room):
     players_fate = room['players_fate']
     mafia_players = [player for player in room['players'] if player.role == 'Мафия' and player.is_alive is True]
     killed_players = players_fate['Мафия']
-    arrested_players = players_fate.get('Шериф') if players_fate.get('Шериф') else []
-    saved_players = players_fate.get('Доктор') if players_fate.get('Доктор') else []
+    arrested_players = players_fate.get('Шериф', [])
+    saved_players = players_fate.get('Доктор', [])
 
     message = ''
     for player in arrested_players:

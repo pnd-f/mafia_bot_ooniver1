@@ -1,5 +1,5 @@
-from time import sleep
 from random import randint
+import os
 
 from telebot import TeleBot, types
 
@@ -93,39 +93,15 @@ def handle_players(message):
             rooms[room_code] = {
                 'master_id': user_id,  # необходимо чтобы потом слать ведущему сообщения
                 'quantity_of_players': quantity_of_players,
-                'players': [],  # debugging
+                'players': [],
                 'roles': roles,
                 'players_fate': {},
-                'ready_for_play': False,
-                'game_is_started': False,
-                'game_is_finished': False,
                 'queue': 0,
                 'time': 'night',
             }
             mafia_bot.send_message(user_id, f'Комната с номером `{room_code}` создана,'
                                             'поделитесь этим номером с игроками')
-            # ждем других игроков
-            room = rooms[room_code]  # наша комната
-            while not room['ready_for_play']:
-                sleep(1)
-            players_name = [player.name for player in room['players']]
-            mafia_bot.send_message(user_id, f'Игроки собрались: {", ".join(players_name)}')
-            mafia_bot.send_message(user_id, 'Раздаем роли')
-            set_roles(room['players'], room['roles'])
-            mafia_bot.send_message(user_id, 'Роли розданы:')
-            # рассылаем всем роли
-            for player in room['players']:
-                mafia_bot.send_message(user_id, f'{player.name}: {player.role}')
-                with open(f'images/{FILE_NAMES[player.role]}.png', 'rb') as img:
-                    mafia_bot.send_photo(player.id, img)
-                mafia_bot.send_message(player.id, f'Вы {player.role}')
-                mafia_bot.send_message(player.id, 'Наступает ночь, город засыпает...')
-
-            # игра
-            keyboard = types.InlineKeyboardMarkup()
-            go_button = types.InlineKeyboardButton(text='Начать игру!', callback_data='night')
-            keyboard.add(go_button)
-            mafia_bot.send_message(user_id, 'Начинаем?', reply_markup=keyboard)
+            # ждём, пока игроки присоединятся
 
 
 def handle_code(message):
@@ -155,7 +131,28 @@ def handle_name(message):
     mafia_bot.send_message(user_id, f'Ждём других игроков...')
     room = rooms[player.room_code]
     if len(room['players']) >= room['quantity_of_players']:
-        room['ready_for_play'] = True
+        # говорим ведущему, что все в сборе
+        master_id = room['master_id']
+        players_name = [player.name for player in room['players']]
+        mafia_bot.send_message(master_id, f'Игроки собрались: {", ".join(players_name)}')
+        mafia_bot.send_message(master_id, 'Раздаем роли')
+        # назначаем роли
+        set_roles(room['players'], room['roles'])
+        mafia_bot.send_message(master_id, 'Роли розданы:')
+        # рассылаем роли мастеру и всем игрокам
+        for player in room['players']:
+            mafia_bot.send_message(master_id, f'{player.name}: {player.role}')
+            file_path = os.path.join('images', f'{FILE_NAMES[player.role]}.png')
+            with open(file_path, 'rb') as img:
+                mafia_bot.send_photo(player.id, img)
+            mafia_bot.send_message(player.id, f'Вы {player.role}')
+            mafia_bot.send_message(player.id, 'Наступает ночь, город засыпает...')
+
+        # игра
+        keyboard = types.InlineKeyboardMarkup()
+        go_button = types.InlineKeyboardButton(text='Начать игру!', callback_data='night')
+        keyboard.add(go_button)
+        mafia_bot.send_message(master_id, 'Начинаем?', reply_markup=keyboard)
 
 
 @mafia_bot.callback_query_handler(lambda call: players_room.get(call.from_user.id) and call.data == 'night')
