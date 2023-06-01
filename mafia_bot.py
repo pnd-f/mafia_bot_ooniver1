@@ -113,7 +113,8 @@ def handle_code(message):
         mafia_bot.register_next_step_handler(message, handle_code)
     else:
         if room_code not in rooms.keys():
-            mafia_bot.send_message(user_id, f'Комнаты {room_code} не существует! попробуйте еще раз')
+            mafia_bot.send_message(
+                user_id, f'Комнаты {room_code} не существует! Чтобы попробовать еще раз, войдите как игрок заново')
         elif not rooms[room_code]['open']:
             mafia_bot.send_message(user_id, f'В комнате {room_code} игроки уже собрались, выберите другую')
             mafia_bot.register_next_step_handler(message, handle_code)
