@@ -97,6 +97,7 @@ def handle_players(message):
                 'roles': roles,  # роли для игроков
                 'players_fate': {},  # специальный объект который хранит выбор игроков когда они походили
                 'queue': 0,  # очередь хода игрока, привязана к ролям, изменяется ночью
+                'open': True  # открыта ли комната для игроков
             }
             mafia_bot.send_message(user_id, f'Комната с номером `{room_code}` создана,'
                                             'поделитесь этим номером с игроками')
@@ -113,6 +114,9 @@ def handle_code(message):
     else:
         if room_code not in rooms.keys():
             mafia_bot.send_message(user_id, f'Комнаты {room_code} не существует! попробуйте еще раз')
+        elif not rooms[room_code]['open']:
+            mafia_bot.send_message(user_id, f'В комнате {room_code} игроки уже собрались, выберите другую')
+            mafia_bot.register_next_step_handler(message, handle_code)
         else:
             player = Player(user_id, room_code)
             rooms[room_code]['players'].append(player)
@@ -130,6 +134,8 @@ def handle_name(message):
     mafia_bot.send_message(user_id, f'Ждём других игроков...')
     room = rooms[player.room_code]
     if len(room['players']) >= room['quantity_of_players']:
+        # закрываем комнату для новых игроков
+        room['open'] = False
         # говорим ведущему, что все в сборе
         master_id = room['master_id']
         players_name = [player.name for player in room['players']]
