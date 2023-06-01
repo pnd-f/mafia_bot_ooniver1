@@ -26,10 +26,10 @@ def set_roles(players, roles):
         players[i].role = 'Мирные жители'
 
 
-def check_end_game_condition_and_return_bool_and_message(room):
+def check_end_game_condition_after_night_and_return_bool_and_message(room):
     """
-    Нужно каждый ход проверять, закончилась ли игра.
-    Игра заканчивается либо когда мафию словили, либо когда убили шерифа или всех мирных граждан
+    Нужно каждый день, после ночи проверять, закончилась ли игра.
+    Игра заканчивается либо когда мафию словили, либо когда убили всех мирных граждан
     :param room:
     :return: bool, str
     """
@@ -43,21 +43,25 @@ def check_end_game_condition_and_return_bool_and_message(room):
     message = ''
     for player in arrested_players:
         if player in mafia_players:
-            player.is_alive = False
-            message += f'Игрок мафии {player.name} был застрелен шерифом!\n'
+            if player in saved_players:
+                message += f'Игрок мафии {player.name} был ранен шерифом, но спасен доктором!\n'
+            else:
+                player.is_alive = False
+                message += f'Игрок мафии {player.name} был застрелен шерифом!\n'
         else:
             message += 'Шериф арестовал не того...\n'
 
     for player in killed_players:
         if player in saved_players:
-            message += f'Игрок {player.role} - {player.name} - был ранен мафией, но спасен доктором\n'
+            message += f'Игрок {player.name} - был ранен мафией, но спасен доктором\n'
         else:
             message += f'Игрок {player.role} - {player.name} - был убит мафией\n'
             player.is_alive = False
 
+    # cчитаем сколько осталось в живых мафии и мирных жителей
+    mafia = [player for player in room['players'] if player.role == 'Мафия' and player.is_alive]
+    civilians = [player for player in room['players'] if player.role == 'Мирные жители' and player.is_alive]
     # если шериф поймал всю мафию, игра заканчивается
-    mafia = [player for player in room['players'] if player.role == 'Мафия' and player.is_alive is True]
-    civilians = [player for player in room['players'] if player.role == 'Мирные жители' and player.is_alive is True]
     if not len(mafia):
         end_game = True
         message += 'Мафии больше не осталось\n'
@@ -68,7 +72,7 @@ def check_end_game_condition_and_return_bool_and_message(room):
     else:
         message += 'Игра продолжается\n'
 
-    # очищаем выбранных игроков
+    # очищаем выбор игроков для следующего хода
     room['players_fate'] = {}
     return end_game, message
 
