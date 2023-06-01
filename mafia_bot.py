@@ -64,10 +64,8 @@ def check_again_master_or_player(call):
 
 
 @mafia_bot.message_handler(content_types=['text'])
-def help_command(message):
+def help_message(message):
     match message.text:
-        case '/help':
-            mafia_bot.send_message(message.from_user.id, HELLO_MESSAGE)
         case _:
             mafia_bot.send_message(message.from_user.id, 'чтобы понять, как пользоваться ботом напиши `/help`')
 
