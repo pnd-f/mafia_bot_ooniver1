@@ -119,8 +119,6 @@ def handle_code(message):
             mafia_bot.send_message(user_id, f'В комнате {room_code} игроки уже собрались, выберите другую')
             mafia_bot.register_next_step_handler(message, handle_code)
         else:
-            player = Player(user_id, room_code)
-            rooms[room_code]['players'].append(player)
             players_room[user_id] = room_code  # назначаем игроку комнату
             mafia_bot.send_message(user_id, f'Приветствую тебя, игрок!')
             mafia_bot.send_message(user_id, f'Как тебя зовут?')
@@ -129,9 +127,10 @@ def handle_code(message):
 
 def handle_name(message):
     user_id = message.from_user.id
+    room_code = players_room[user_id]  # забираем номер комнаты для игрока
     name = message.text
-    player = get_player_through_players_room(user_id)
-    player.name = name  # Сохраняем игроку имя
+    player = Player(user_id, name, room_code)
+    rooms[room_code]['players'].append(player)
     mafia_bot.send_message(user_id, f'Ждём других игроков...')
     room = rooms[player.room_code]
     if len(room['players']) >= room['quantity_of_players']:

@@ -1,10 +1,10 @@
 class Player:
-    def __init__(self, user_id, room_code):
+    def __init__(self, user_id, name, room_code):
         self.id = user_id
-        self.name = ''
+        self.name = name
         self.room_code = room_code
         self.role = None
         self.is_alive = True
 
     def __repr__(self):
-        return f'{self.name if self.name else "anonim"} - {self.role if self.role else ""}'
+        return f'{self.name} - {self.role if self.role else ""}'
