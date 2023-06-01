@@ -83,9 +83,10 @@ def handle_players(message):
             mafia_bot.send_message(user_id, 'игроков должно быть больше 3')
             mafia_bot.register_next_step_handler(message, handle_players)
         else:
-            room_code = randint(100000, 999999)
-            while room_code in rooms.keys():  # генерируем номер для случайной комнаты
-                room_code = randint(100000, 999999)
+            # генерируем номер для случайной комнаты
+            # пока он не будет уникальный
+            while room_code := randint(100000, 999999) in rooms.keys():
+                pass
             players_room[message.from_user.id] = room_code  # комната ведущего
             roles = ROLES[:]
             configure_roles(quantity_of_players, roles)
