@@ -41,6 +41,7 @@ def chose_master_or_player(call):
                     '- Мафия\n'
                     '- Шериф\n'
                     '- Мирные жители\n'
+                    'Если игроков будет больше - добавим доктора.\n'
                     'Сколько будет игроков?'
                 )
                 mafia_bot.register_next_step_handler(call.message, handle_players)
