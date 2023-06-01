@@ -185,7 +185,7 @@ def handle_night(call):
 def check_list_names(call):
     return players_room.get(call.from_user.id) and \
         call.data != 'day' and call.data != 'night' and call.data != 'ведущий' and call.data != 'игрок' and \
-        int(call.data) in [player.id for player in rooms[players_room[call.from_user.id]]['players']]
+        int(call.data) in [player.id for player in rooms[players_room[call.from_user.id]]['players'] if player.is_alive]
 
 
 @mafia_bot.callback_query_handler(check_list_names)
