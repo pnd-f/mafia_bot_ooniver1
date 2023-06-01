@@ -93,11 +93,10 @@ def handle_players(message):
             rooms[room_code] = {
                 'master_id': user_id,  # необходимо чтобы потом слать ведущему сообщения
                 'quantity_of_players': quantity_of_players,
-                'players': [],
-                'roles': roles,
-                'players_fate': {},
-                'queue': 0,
-                'time': 'night',
+                'players': [],  # здесь будут храниться наши пришедшие игроки
+                'roles': roles,  # роли для игроков
+                'players_fate': {},  # специальный объект который хранит выбор игроков когда они походили
+                'queue': 0,  # очередь хода игрока, привязана к ролям, изменяется ночью
             }
             mafia_bot.send_message(user_id, f'Комната с номером `{room_code}` создана,'
                                             'поделитесь этим номером с игроками')
