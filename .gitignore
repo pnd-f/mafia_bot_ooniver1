@@ -160,3 +160,4 @@ cython_debug/
 .idea/
 
 player_factory.py
+parts

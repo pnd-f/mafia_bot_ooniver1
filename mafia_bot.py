@@ -30,26 +30,23 @@ def start(message):
     lambda call: not players_room.get(call.from_user.id) and (call.data == 'ведущий' or call.data == 'игрок'))
 def chose_master_or_player(call):
     user_id = call.from_user.id
-    if user_id not in players_room:  # проверка на то, чтобы игрок дважды не зашел в одну комнату
-        match call.data:
-            case 'ведущий':
-                mafia_bot.send_message(user_id, 'Приветствую тебя, Ведущий!')
+    match call.data:
+        case 'ведущий':
+            mafia_bot.send_message(user_id, 'Приветствую тебя, Ведущий!')
 
-                mafia_bot.send_message(
-                    user_id,
-                    'Игроков должно быть не меньше трех: \n'
-                    '- Мафия\n'
-                    '- Шериф\n'
-                    '- Мирные жители\n'
-                    'Если игроков будет больше - добавим доктора.\n'
-                    'Сколько будет игроков?'
-                )
-                mafia_bot.register_next_step_handler(call.message, handle_players)
-            case 'игрок':
-                mafia_bot.send_message(user_id, 'Введите номер комнаты, чтобы присоединиться')
-                mafia_bot.register_next_step_handler(call.message, handle_code)
-    else:
-        mafia_bot.send_message(user_id, f'вы уже состоите в комнате {players_room[user_id]}')
+            mafia_bot.send_message(
+                user_id,
+                'Игроков должно быть не меньше трех: \n'
+                '- Мафия\n'
+                '- Шериф\n'
+                '- Мирные жители\n'
+                'Если игроков будет больше - добавим доктора.\n'
+                'Сколько будет игроков?'
+            )
+            mafia_bot.register_next_step_handler(call.message, handle_players)
+        case 'игрок':
+            mafia_bot.send_message(user_id, 'Введите номер комнаты, чтобы присоединиться')
+            mafia_bot.register_next_step_handler(call.message, handle_code)
 
 
 @mafia_bot.callback_query_handler(
@@ -66,9 +63,7 @@ def check_again_master_or_player(call):
 
 @mafia_bot.message_handler(content_types=['text'])
 def help_message(message):
-    match message.text:
-        case _:
-            mafia_bot.send_message(message.from_user.id, 'чтобы понять, как пользоваться ботом напиши `/help`')
+    mafia_bot.send_message(message.from_user.id, 'чтобы понять, как пользоваться ботом напиши `/help`')
 
 
 def handle_players(message):
@@ -80,12 +75,12 @@ def handle_players(message):
         mafia_bot.register_next_step_handler(message, handle_players)
     else:
         if quantity_of_players < 3:
-            mafia_bot.send_message(user_id, 'игроков должно быть больше 3')
+            mafia_bot.send_message(user_id, 'игроков должно быть больше 3, попробуйте еще раз')
             mafia_bot.register_next_step_handler(message, handle_players)
         else:
             # генерируем номер для случайной комнаты
             # пока он не будет уникальный
-            while room_code := randint(100000, 999999) in rooms.keys():
+            while (room_code := randint(100000, 999999)) in rooms.keys():
                 pass
             players_room[message.from_user.id] = room_code  # комната ведущего
             roles = ROLES[:]
