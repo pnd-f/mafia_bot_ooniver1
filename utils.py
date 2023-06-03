@@ -34,8 +34,8 @@ def check_end_game_condition_after_night_and_return_bool_and_message(room):
     :return: bool, str
     """
     end_game = False
-    players_fate = room['players_fate']
-    mafia_players = [player for player in room['players'] if player.role == 'Мафия' and player.is_alive is True]
+    players_fate = room.players_fate
+    mafia_players = [player for player in room.players if player.role == 'Мафия' and player.is_alive is True]
     killed_players = players_fate['Мафия']
     arrested_players = players_fate.get('Шериф', [])
     saved_players = players_fate.get('Доктор', [])
@@ -59,8 +59,8 @@ def check_end_game_condition_after_night_and_return_bool_and_message(room):
             player.is_alive = False
 
     # cчитаем сколько осталось в живых мафии и мирных жителей
-    mafia = [player for player in room['players'] if player.role == 'Мафия' and player.is_alive]
-    civilians = [player for player in room['players'] if player.role == 'Мирные жители' and player.is_alive]
+    mafia = [player for player in room.players if player.role == 'Мафия' and player.is_alive]
+    civilians = [player for player in room.players if player.role == 'Мирные жители' and player.is_alive]
     # если шериф поймал всю мафию, игра заканчивается
     if not len(mafia):
         end_game = True
@@ -73,7 +73,7 @@ def check_end_game_condition_after_night_and_return_bool_and_message(room):
         message += 'Игра продолжается\n'
 
     # очищаем выбор игроков для следующего хода
-    room['players_fate'] = {}
+    room.players_fate = {}
     return end_game, message
 
 
