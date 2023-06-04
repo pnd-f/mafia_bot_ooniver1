@@ -5,8 +5,8 @@ from telebot import TeleBot, types
 
 from settings import HELLO_MESSAGE, BOT_TOKEN, ROLES, ERROR_NUMBER_MESSAGE, FILE_NAMES
 from model import Player, Room
-from utils import set_roles, check_end_game_condition_after_night_and_return_bool_and_message, \
-    configure_roles, return_keyboard_with_alive_players, get_player_through_id
+from utils import check_end_game_condition_after_night_and_return_bool_and_message, \
+    configure_roles, return_keyboard_with_alive_players
 
 mafia_bot = TeleBot(BOT_TOKEN)
 
@@ -103,7 +103,7 @@ def handle_code(message):
         if room_code not in rooms.keys():
             mafia_bot.send_message(
                 user_id, f'Комнаты {room_code} не существует! Чтобы попробовать еще раз, войдите как игрок заново')
-        elif not rooms[room_code]:
+        elif not rooms[room_code].open:
             mafia_bot.send_message(user_id, f'В комнате {room_code} игроки уже собрались, выберите другую')
             mafia_bot.register_next_step_handler(message, handle_code)
         else:
@@ -118,9 +118,9 @@ def handle_name(message):
     room_code = players_room[user_id]  # забираем номер комнаты для игрока
     name = message.text
     player = Player(user_id, name, room_code)
-    rooms[room_code].players.append(player)
+    room = rooms[room_code]
+    room.players.append(player)
     mafia_bot.send_message(user_id, f'Ждём других игроков...')
-    room = rooms[player.room_code]
     if len(room.players) >= room.quantity_of_players:
         # закрываем комнату для новых игроков
         room.open = False
@@ -130,9 +130,9 @@ def handle_name(message):
         mafia_bot.send_message(master_id, f'Игроки собрались: {", ".join(players_name)}')
         mafia_bot.send_message(master_id, 'Раздаем роли')
         # назначаем роли
-        set_roles(room.players, room.roles)
-        mafia_bot.send_message(master_id, 'Роли розданы:')
+        room.set_roles()
         # рассылаем роли мастеру и всем игрокам
+        mafia_bot.send_message(master_id, 'Роли розданы:')
         for player in room.players:
             mafia_bot.send_message(master_id, f'{player.name}: {player.role}')
             file_path = os.path.join('images', f'{FILE_NAMES[player.role]}.png')
@@ -152,13 +152,13 @@ def handle_name(message):
 def handle_night(call):
     room_code = players_room[call.from_user.id]
     room = rooms[room_code]
-    alive_players = [player for player in room.players if player.is_alive]
+    alive_players = room.get_alive_players()
 
     role = room.roles[room.queue]
     for player in alive_players:
         mafia_bot.send_message(player.id, f'Ходит {role}')  # можно картиночку послать ночи
 
-    players_with_role = list(filter(lambda player: player.role == role and player.is_alive, room.players))
+    players_with_role = room.get_players_with_role(role)
     action_message = {
         'Мафия': 'выберете кого убить...',
         'Доктор': 'выберете кого спасти...',
@@ -178,14 +178,14 @@ def check_night_action(call):
 
 @mafia_bot.callback_query_handler(check_night_action)
 def night_action(call):
-    player = get_player_through_players_room(call.from_user.id)
-    room = rooms[player.room_code]
+    room_code = players_room[call.from_user.id]
+    room = rooms[room_code]
+    player = room.get_player_by_id(call.from_user.id)
 
-    dependent_player = get_player_through_id(room.players, int(call.data))
+    dependent_player = room.get_player_by_id(int(call.data))
     room.players_fate[player.role] = [dependent_player]
 
-    end_queue = len(room.roles) - 1
-    if room.queue < end_queue:
+    if room.queue < len(room.roles) - 1:
         room.queue += 1
         keyboard = types.InlineKeyboardMarkup()
         next_button = types.InlineKeyboardButton(text='Передать ход', callback_data='night')
@@ -207,7 +207,7 @@ def night_action(call):
 def handle_day(call):
     room_code = players_room[call.from_user.id]
     room = rooms[room_code]
-    end_game, message = check_end_game_condition_after_night_and_return_bool_and_message(room)
+    end_game, message = room.check_end_game_condition_after_night_and_return_bool_and_message()
 
     mafia_bot.send_message(room.master_id, message)  # отдельно шлем мастеру
     for player in room.players:
@@ -252,14 +252,6 @@ def clear_room(room_code):
         del players_room[player.id]
     del players_room[room.master_id]  # очищаем мастера
     del rooms[room_code]  # удаляем комнату
-
-
-def get_player_through_players_room(user_id) -> Player:
-    room_code = players_room[user_id]
-    all_players = rooms[room_code].players
-    for i in range(len(all_players)):
-        if all_players[i].id == user_id:
-            return all_players[i]
 
 
 if __name__ == '__main__':
