@@ -14,7 +14,7 @@ class Player:
 
 
 class Room:
-    def __init__(self, master_id, quantity_of_players, roles):
+    def __init__(self, master_id: int, quantity_of_players: int, roles: list):
         self.master_id = master_id  # необходимо чтобы потом слать ведущему сообщения
         self.quantity_of_players = quantity_of_players
         self.players = []  # здесь будут храниться наши пришедшие игроки
@@ -22,6 +22,7 @@ class Room:
         self.players_fate = {}  # специальный объект который хранит выбор игроков когда они походили
         self.queue = 0,  # очередь хода игрока, привязана к ролям, изменяется ночью
         self.open = True  # открыта ли комната для игроков
+        self.time = 'night'  # текущее время
 
     def set_roles(self):
         used_index = []
@@ -53,10 +54,8 @@ class Room:
         """
         Нужно каждый день, после ночи проверять, закончилась ли игра.
         Игра заканчивается либо когда мафию словили, либо когда убили всех мирных граждан
-        :param room:
         :return: bool, str
         """
-        end_game = False
         mafia_players = self.get_players_with_role('Мафия')
         killed_players = self.players_fate['Мафия']
         arrested_players = self.players_fate.get('Шериф', [])
@@ -80,7 +79,11 @@ class Room:
                 message += f'Игрок {player.role} - {player.name} - был убит мафией\n'
                 player.is_alive = False
 
-        # cчитаем сколько осталось в живых мафии и мирных жителей
+        return self.__check_results(message)
+
+    def __check_results(self, message):
+        end_game = False
+        # считаем сколько осталось в живых мафии и мирных жителей
         mafia = self.get_players_with_role('Мафия')
         civilians = self.get_players_with_role('Мирные жители')
         # если шериф поймал всю мафию, игра заканчивается
@@ -109,3 +112,28 @@ class Room:
         # очищаем выбор игроков для следующего хода
         self.players_fate = {}
         return end_game, message
+
+    def check_end_game_condition_after_day_and_return_bool_and_message(self):
+        """
+        После голосования днём проверяем, закончилась ли игра.
+        Игра заканчивается либо когда мафию словили, либо когда убили всех мирных граждан
+        :return: bool, str
+        """
+        list_values = list(self.players_fate.values())
+        max_value = max(list_values)
+        message = '\n'
+        if list_values.count(max_value) > 1:
+            message = 'Игроки не смогли договориться кого повесить, все остаются живы\n'
+        else:
+            for key, value in self.players_fate.items():
+                if value == max_value:
+                    player = self.get_player_by_id(key)
+                    # убиваем игрока
+                    player.is_alive = False
+                    message = f'Общим голосованием было решено повесить {player.name}\n'
+                    if player.role == 'Мафия':
+                        message += 'и он был мафией!\n'
+                    else:
+                        message += 'но он не был мафией...\n'
+
+        return self.__check_results(message)

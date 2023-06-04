@@ -5,8 +5,7 @@ from telebot import TeleBot, types
 
 from settings import HELLO_MESSAGE, BOT_TOKEN, ROLES, ERROR_NUMBER_MESSAGE, FILE_NAMES
 from model import Player, Room
-from utils import check_end_game_condition_after_night_and_return_bool_and_message, \
-    configure_roles, return_keyboard_with_alive_players
+from utils import configure_roles, return_keyboard_with_alive_players
 
 mafia_bot = TeleBot(BOT_TOKEN)
 
@@ -56,9 +55,9 @@ def check_again_master_or_player(call):
     room_code = players_room[user_id]
     room = rooms[room_code]
     if user_id == room.master_id:
-        mafia_bot.send_message(user_id, f'Вы уже состоите как ведущий в комнате {room_code}, ждите...')
+        mafia_bot.send_message(user_id, f'Вы уже состоите как ведущий в комнате {room_code}...')
     else:
-        mafia_bot.send_message(user_id, f'Вы уже состоите как игрок в комнате {room_code}, ждите...')
+        mafia_bot.send_message(user_id, f'Вы уже состоите как игрок в комнате {room_code}...')
 
 
 @mafia_bot.message_handler(content_types=['text'])
@@ -171,9 +170,12 @@ def handle_night(call):
 
 
 def check_night_action(call):
-    return players_room.get(call.from_user.id) and \
+    user_id = call.from_user.id
+    room_code = players_room.get(user_id)
+    return rooms[room_code] and \
+        rooms[room_code].time == 'night' and\
         call.data != 'day' and call.data != 'night' and call.data != 'ведущий' and call.data != 'игрок' and \
-        int(call.data) in [player.id for player in rooms[players_room[call.from_user.id]].players if player.is_alive]
+        int(call.data) in rooms[room_code].get_alive_players()
 
 
 @mafia_bot.callback_query_handler(check_night_action)
@@ -182,17 +184,20 @@ def night_action(call):
     room = rooms[room_code]
     player = room.get_player_by_id(call.from_user.id)
 
-    dependent_player = room.get_player_by_id(int(call.data))
-    room.players_fate[player.role] = [dependent_player]
+    selected_player = room.get_player_by_id(int(call.data))
+    if player.role in room.players_fate:
+        room.players_fate[player.role].append(selected_player)
+    else:
+        room.players_fate[player.role] = [selected_player]
 
     if room.queue < len(room.roles) - 1:
         room.queue += 1
         keyboard = types.InlineKeyboardMarkup()
         next_button = types.InlineKeyboardButton(text='Передать ход', callback_data='night')
         keyboard.add(next_button)
-        mafia_bot.send_message(player.id, f'Вы выбрали {dependent_player.name}', reply_markup=keyboard)
+        mafia_bot.send_message(player.id, f'Вы выбрали {selected_player.name}', reply_markup=keyboard)
     else:
-        mafia_bot.send_message(player.id, f'Вы выбрали {dependent_player.name}...')
+        mafia_bot.send_message(player.id, f'Вы выбрали {selected_player.name}...')
         room.queue = 0
 
         for each_player in room.players:
@@ -201,6 +206,7 @@ def night_action(call):
         next_button = types.InlineKeyboardButton(text='Дождаться утра', callback_data='day')
         keyboard.add(next_button)
         mafia_bot.send_message(room.master_id, 'Наступает день... город просыпается', reply_markup=keyboard)
+        room.time = 'day'
 
 
 @mafia_bot.callback_query_handler(lambda call: players_room.get(call.from_user.id) and call.data == 'day')
@@ -214,14 +220,66 @@ def handle_day(call):
         mafia_bot.send_message(player.id, message)
     if not end_game:
         # Этап голосования всех живых игроков
-        # TODO ....
-
+        alive_players = room.get_alive_players()
+        for player in alive_players:
+            keyboard = return_keyboard_with_alive_players(room.players, player)
+            mafia_bot.send_message(player.id, 'Как вы думаете, кто мафия?', reply_markup=keyboard)
+    else:  # заканчиваем игру
         for player in room.players:
+            mafia_bot.send_message(player.id, 'Игра закончена. Спасибо за игру!!!')
+        mafia_bot.send_message(room.master_id, 'Игра закончена. Спасибо за игру!!!')  # отдельно шлем мастеру
+        clear_room(room_code)
+
+
+def check_day_action(call):
+    user_id = call.from_user.id
+    room_code = players_room.get(user_id)
+    return rooms[room_code] and \
+        rooms[room_code].time == 'day' and \
+        call.data != 'day' and call.data != 'night' and call.data != 'ведущий' and call.data != 'игрок' and \
+        int(call.data) in rooms[room_code].get_alive_players()
+
+
+@mafia_bot.callback_query_handler(check_day_action)
+def day_action(call):
+    user_id = call.from_user.id
+    room_code = players_room[user_id]
+    room = rooms[room_code]
+    player = room.get_player_by_id(user_id)
+    selected_player = room.get_player_by_id(int(call.data))
+    if selected_player.id in room.players_fate:
+        room.players_fate[selected_player.id] += 1
+    else:
+        room.players_fate[selected_player.id] = 1
+    mafia_bot.send_message(player.id, f'Вы выбрали {selected_player.name}...')
+    # считаем количество проголосовавших,
+    quantity = 0
+    for _, value in room.players_fate.items():
+        quantity += value
+    # если проголосовали все, ведущему даем кнопку "узнать результаты"
+    if quantity == len(room.get_alive_players()):
+        keyboard = types.InlineKeyboardMarkup()
+        next_button = types.InlineKeyboardButton(text='Показать результаты голосования', callback_data='day_results')
+        keyboard.add(next_button)
+        mafia_bot.send_message(room.master_id, 'Все проголосовали', reply_markup=keyboard)
+
+
+@mafia_bot.callback_query_handler(lambda call: players_room.get(call.from_user.id) and call.data == 'day_results')
+def handle_in_afternoon(call):
+    user_id = call.from_user.id
+    room_code = players_room[user_id]
+    room = rooms[room_code]
+    end_game, message = room.check_end_game_condition_after_day_and_return_bool_and_message()
+    if not end_game:
+        mafia_bot.send_message(room.master_id, message)
+        for player in room.players:
+            mafia_bot.send_message(player.id, message)
             mafia_bot.send_message(player.id, 'Наступает ночь, город засыпает...')
         keyboard = types.InlineKeyboardMarkup()
         next_button = types.InlineKeyboardButton(text='Продолжить!', callback_data='night')
         keyboard.add(next_button)
         mafia_bot.send_message(room.master_id, 'Наступает ночь, город засыпает...', reply_markup=keyboard)
+
     else:  # заканчиваем игру
         for player in room.players:
             mafia_bot.send_message(player.id, 'Игра закончена. Спасибо за игру!!!')
