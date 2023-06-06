@@ -79,7 +79,7 @@ def handle_players(message):
         else:
             # генерируем номер для случайной комнаты
             # пока он не будет уникальный
-            while (room_code := randint(100000, 999999)) in rooms.keys():
+            while (room_code := randint(100, 999)) in rooms.keys():
                 pass
             players_room[message.from_user.id] = room_code  # комната ведущего
             roles = ROLES[:]
@@ -156,6 +156,7 @@ def handle_night(call):
     role = room.roles[room.queue]
     for player in alive_players:
         mafia_bot.send_message(player.id, f'Ходит {role}')  # можно картиночку послать ночи
+        mafia_bot.send_message(room.master_id, f'Ходит {role}')  # можно картиночку послать ночи
 
     players_with_role = room.get_players_with_role(role)
     action_message = {
@@ -175,7 +176,7 @@ def check_night_action(call):
     return rooms[room_code] and \
         rooms[room_code].time == 'night' and\
         call.data != 'day' and call.data != 'night' and call.data != 'ведущий' and call.data != 'игрок' and \
-        int(call.data) in rooms[room_code].get_alive_players()
+        int(call.data) in [player.id for player in rooms[room_code].get_alive_players()]
 
 
 @mafia_bot.callback_query_handler(check_night_action)
@@ -200,7 +201,7 @@ def night_action(call):
         mafia_bot.send_message(player.id, f'Вы выбрали {selected_player.name}...')
         room.queue = 0
 
-        for each_player in room.players:
+        for each_player in room.get_alive_players():
             mafia_bot.send_message(each_player.id, 'Наступает день... город просыпается')
         keyboard = types.InlineKeyboardMarkup()
         next_button = types.InlineKeyboardButton(text='Дождаться утра', callback_data='day')
@@ -237,7 +238,7 @@ def check_day_action(call):
     return rooms[room_code] and \
         rooms[room_code].time == 'day' and \
         call.data != 'day' and call.data != 'night' and call.data != 'ведущий' and call.data != 'игрок' and \
-        int(call.data) in rooms[room_code].get_alive_players()
+        int(call.data) in [player.id for player in rooms[room_code].get_alive_players()]
 
 
 @mafia_bot.callback_query_handler(check_day_action)
