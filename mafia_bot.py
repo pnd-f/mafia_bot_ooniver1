@@ -156,7 +156,6 @@ def handle_night(call):
     role = room.roles[room.queue]
     for player in alive_players:
         mafia_bot.send_message(player.id, f'Ходит {role}')  # можно картиночку послать ночи
-        mafia_bot.send_message(room.master_id, f'Ходит {role}')  # можно картиночку послать ночи
 
     players_with_role = room.get_players_with_role(role)
     action_message = {
@@ -173,11 +172,18 @@ def handle_night(call):
 def check_night_action(call):
     user_id = call.from_user.id
     room_code = players_room.get(user_id)
-    return rooms[room_code] and \
-        rooms[room_code].time == 'night' and\
-        call.data != 'day' and call.data != 'night' and call.data != 'ведущий' and call.data != 'игрок' and \
-        int(call.data) in [player.id for player in rooms[room_code].get_alive_players()]
+    if room_code:
+        room = rooms[room_code]
+        player = room.get_player_by_id(user_id)
+        return not player.pressed_button and \
+            room.time == 'night' and \
+            call.data != 'day' and call.data != 'night' and call.data != 'ведущий' and call.data != 'игрок' and \
+            call.data != 'day_results' and \
+            int(call.data) in [player.id for player in room.get_alive_players()]
 
+    else:
+        return False
+    
 
 @mafia_bot.callback_query_handler(check_night_action)
 def night_action(call):
@@ -190,6 +196,7 @@ def night_action(call):
         room.players_fate[player.role].append(selected_player)
     else:
         room.players_fate[player.role] = [selected_player]
+    player.pressed_button = True
 
     if room.queue < len(room.roles) - 1:
         room.queue += 1
@@ -208,6 +215,8 @@ def night_action(call):
         keyboard.add(next_button)
         mafia_bot.send_message(room.master_id, 'Наступает день... город просыпается', reply_markup=keyboard)
         room.time = 'day'
+        for i in range(len(room.players)):
+            room.players[i].pressed_button = False
 
 
 @mafia_bot.callback_query_handler(lambda call: players_room.get(call.from_user.id) and call.data == 'day')
@@ -235,10 +244,16 @@ def handle_day(call):
 def check_day_action(call):
     user_id = call.from_user.id
     room_code = players_room.get(user_id)
-    return rooms[room_code] and \
-        rooms[room_code].time == 'day' and \
-        call.data != 'day' and call.data != 'night' and call.data != 'ведущий' and call.data != 'игрок' and \
-        int(call.data) in [player.id for player in rooms[room_code].get_alive_players()]
+    if room_code:
+        room = rooms[room_code]
+        player = room.get_player_by_id(user_id)
+        return not player.pressed_button and \
+            room.time == 'day' and \
+            call.data != 'day' and call.data != 'night' and call.data != 'ведущий' and call.data != 'игрок' and \
+            call.data != 'day_results' and \
+            int(call.data) in [player.id for player in room.get_alive_players()]
+    else:
+        return False
 
 
 @mafia_bot.callback_query_handler(check_day_action)
@@ -252,6 +267,8 @@ def day_action(call):
         room.players_fate[selected_player.id] += 1
     else:
         room.players_fate[selected_player.id] = 1
+    player.pressed_button = True
+
     mafia_bot.send_message(player.id, f'Вы выбрали {selected_player.name}...')
     # считаем количество проголосовавших,
     quantity = 0
@@ -280,6 +297,8 @@ def handle_in_afternoon(call):
         next_button = types.InlineKeyboardButton(text='Продолжить!', callback_data='night')
         keyboard.add(next_button)
         mafia_bot.send_message(room.master_id, 'Наступает ночь, город засыпает...', reply_markup=keyboard)
+        for i in range(len(room.players)):
+            room.players[i].pressed_button = False
 
     else:  # заканчиваем игру
         for player in room.players:

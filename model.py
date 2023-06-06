@@ -8,6 +8,7 @@ class Player:
         self.room_code = room_code
         self.role = None
         self.is_alive = True
+        self.pressed_button = False
 
     def __repr__(self):
         return f'{self.name} - {self.role if self.role else ""}'
@@ -104,10 +105,12 @@ class Room:
             for i in range(len(self.roles)):
                 if self.roles[i] == 'Шериф':
                     del self.roles[i]
+                    break
         if len(doctors) == 0:
             for i in range(len(self.roles)):
                 if self.roles[i] == 'Доктор':
                     del self.roles[i]
+                    break
 
         # очищаем выбор игроков для следующего хода
         self.players_fate = {}
